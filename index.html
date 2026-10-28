@@ -59,7 +59,9 @@ nav button.on{color:var(--blue);box-shadow:inset 0 3px 0 var(--blue)}
     <label>Proyecto</label><input list="proys" data-k="proyecto" placeholder="Selecciona o escribe">
     <datalist id="proys"></datalist>
     <div class="row"><div><label>Fecha</label><input type="date" data-k="fecha"></div><div><label>Visita N.º</label><input data-k="visita" inputmode="numeric" placeholder="1"></div></div>
-    <label>Supervisor</label><input data-k="supervisor" placeholder="Nombre">
+    <label>Empresa</label><input data-k="empresa" placeholder="Grupo Roble">
+    <label>Supervisor / Contacto</label><input data-k="supervisor" placeholder="Nombre">
+    <div class="row"><div><label>Teléfono</label><input data-k="telefono" type="tel" inputmode="tel" placeholder="8888-8888"></div><div><label>Correo electrónico</label><input data-k="correo" type="email" inputmode="email" placeholder="nombre@empresa.com"></div></div>
     <label>Contratista</label><input data-k="contratista" placeholder="Empresa a cargo de la obra">
     <div class="row"><div><label>Clima</label><select data-k="clima"><option>Soleado</option><option>Nublado</option><option>Lluvia</option><option>Lluvia intensa</option></select></div><div><label>Personal en sitio</label><input data-k="personal" inputmode="numeric" placeholder="0"></div></div>
   </div>
@@ -109,7 +111,7 @@ nav button.on{color:var(--blue);box-shadow:inset 0 3px 0 var(--blue)}
 
 <script>
 const KEY='roble_sup_v1';
-const blank=()=>({proyecto:'',fecha:new Date().toISOString().slice(0,10),visita:'',supervisor:'',contratista:'',clima:'Soleado',personal:'',obs:'',act:[],fot:[],hal:[],pen:[]});
+const blank=()=>({empresa:'Grupo Roble',telefono:'',correo:'',proyecto:'',fecha:new Date().toISOString().slice(0,10),visita:'',supervisor:'',contratista:'',clima:'Soleado',personal:'',obs:'',act:[],fot:[],hal:[],pen:[]});
 let S=blank();
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -185,14 +187,22 @@ async function makePDF(){
   const W=210,M=14,CW=W-2*M,H=297;let y=0,pg=1;
   const T=(t,x,yy,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize(o.s||9);doc.setTextColor(...(o.c||[27,36,56]));doc.text(String(t),x,yy,o.a?{align:o.a}:undefined)};
   const wrap=(t,w,s=9)=>{doc.setFontSize(s);return doc.splitTextToSize(String(t||''),w)};
-  function top(){doc.setFillColor(...NAVY);doc.rect(0,0,W,pg===1?34:14,'F');
-    if(pg===1){T('GRUPO ROBLE · INFORME DE SUPERVISIÓN',M,11,{s:8,b:1,c:[170,185,215]});T(S.proyecto||'Proyecto',M,22,{s:17,b:1,c:[255,255,255]});T(`Visita ${S.visita||'—'}  ·  ${fmtF(S.fecha)}`,W-M,22,{s:10,a:'right',c:[255,255,255]});y=42}
-    else{T(S.proyecto||'Proyecto',M,9,{s:9,b:1,c:[255,255,255]});T(`Informe de supervisión · ${fmtF(S.fecha)}`,W-M,9,{s:8,a:'right',c:[200,210,230]});y=22}}
+  function top(){
+    if(pg===1){
+      const L=[['Empresa:',S.empresa],['Contacto:',S.supervisor],['Teléfono:',S.telefono],['Correo electrónico:',S.correo]];
+      const R=[['Título:',S.proyecto],['Creado el:',fmtF(S.fecha)],['Nro. de elementos:',String(S.fot.length)]];
+      const hv=(t,x,yy,mw)=>{const l=wrap(t||'—',mw,8.5);doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(27,36,56);doc.text(l[0],x,yy)};
+      let yy=14;
+      L.forEach(r=>{T(r[0],M,yy,{b:1,s:8.5});hv(r[1],M+36,yy,45);yy+=5.2});
+      yy=14;
+      R.forEach(r=>{T(r[0],M+84,yy,{b:1,s:8.5});hv(r[1],M+118,yy,CW-118);yy+=5.2});
+      doc.setDrawColor(27,36,56);doc.setLineWidth(.3);doc.line(M,36,W-M,36);y=44}
+    else{T(S.proyecto||'Proyecto',M,12,{s:9,b:1});T(`Informe de supervisión · ${fmtF(S.fecha)}`,W-M,12,{s:8,a:'right',c:GREY});doc.setDrawColor(27,36,56);doc.setLineWidth(.3);doc.line(M,15,W-M,15);y=24}}
   function need(h){if(y+h>H-16){doc.addPage();pg++;top()}}
   function h2(t,col=BLUE){need(14);doc.setFillColor(...col);doc.rect(M,y,CW,.8,'F');y+=6;T(t.toUpperCase(),M,y,{s:9,b:1,c:NAVY});y+=5}
   top();
   // datos
-  const info=[['Supervisor',S.supervisor],['Contratista',S.contratista],['Clima',S.clima],['Personal en sitio',S.personal]];
+  const info=[['Contratista',S.contratista],['Visita N.º',S.visita],['Clima',S.clima],['Personal en sitio',S.personal]];
   info.forEach((r,i)=>{const x=M+(i%2)*(CW/2),yy=y+Math.floor(i/2)*10;T(r[0].toUpperCase(),x,yy,{s:7,b:1,c:GREY});T(r[1]||'—',x,yy+4.5,{s:10})});y+=24;
   // avance
   h2('Avance físico',GREEN);
