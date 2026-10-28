@@ -80,7 +80,8 @@ nav button.on{color:var(--blue);box-shadow:inset 0 3px 0 var(--blue)}
 
 <section id="s2">
   <div id="fotL"></div>
-  <label class="btn b" style="text-align:center;cursor:pointer;margin-top:0;font-size:15px;text-transform:none;letter-spacing:0;color:#fff">📷 Tomar / agregar fotos<input type="file" accept="image/*" multiple id="fIn" style="display:none"></label>
+  <div class="row"><label class="btn b" style="text-align:center;cursor:pointer;margin-top:0;color:#fff">📷 Tomar foto<input type="file" accept="image/*" capture="environment" class="fIn" style="display:none"></label>
+  <label class="btn s" style="text-align:center;cursor:pointer;margin-top:0">🖼️ Galería<input type="file" accept="image/*" multiple class="fIn" style="display:none"></label></div>
   <p class="mut" style="margin-top:8px">Las fotos se comprimen automáticamente para el PDF.</p>
 </section>
 
@@ -169,7 +170,7 @@ $('#reset').onclick=()=>{if(!confirm('¿Borrar el informe actual y empezar uno n
 
 // photos
 function shrink(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const m=1100,s=Math.min(1,m/Math.max(im.width,im.height));const w=Math.round(im.width*s),h=Math.round(im.height*s);const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);res({d:c.toDataURL('image/jpeg',.72),w,h,c:''})};im.onerror=rej;im.src=r.result};r.onerror=rej;r.readAsDataURL(file)})}
-$('#fIn').onchange=async e=>{for(const f of e.target.files){try{S.fot.push(await shrink(f))}catch(x){toast('No se pudo leer una foto')}}e.target.value='';render('fot');save()};
+$$('.fIn').forEach(i=>i.onchange=async e=>{for(const f of e.target.files){try{S.fot.push(await shrink(f))}catch(x){toast('No se pudo leer una foto')}}e.target.value='';render('fot');save()});
 
 function summary(){
   const ab=S.hal.filter(h=>h.est!=='Cerrado').length;
