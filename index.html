@@ -57,11 +57,16 @@ nav button.on{color:var(--blue);box-shadow:inset 0 3px 0 var(--blue)}
 <section id="s0" class="on">
   <div class="card n"><h2>Datos de la visita</h2>
     <label>Proyecto</label><input list="proys" data-k="proyecto" placeholder="Selecciona o escribe">
-    <datalist id="proys"><option>Multiplaza Escazú</option><option>Multiplaza Curridabat</option><option>Roble Corporate Center (RCC)</option><option>Escazú Corporate Center (ECC)</option><option>Plaza Roble</option></datalist>
+    <datalist id="proys"></datalist>
     <div class="row"><div><label>Fecha</label><input type="date" data-k="fecha"></div><div><label>Visita N.º</label><input data-k="visita" inputmode="numeric" placeholder="1"></div></div>
     <label>Supervisor</label><input data-k="supervisor" placeholder="Nombre">
     <label>Contratista</label><input data-k="contratista" placeholder="Empresa a cargo de la obra">
     <div class="row"><div><label>Clima</label><select data-k="clima"><option>Soleado</option><option>Nublado</option><option>Lluvia</option><option>Lluvia intensa</option></select></div><div><label>Personal en sitio</label><input data-k="personal" inputmode="numeric" placeholder="0"></div></div>
+  </div>
+  <div class="card"><h2>Mis proyectos</h2>
+    <div class="row" style="grid-template-columns:1fr auto"><input id="pNew" placeholder="Nombre del proyecto"><button class="btn b" id="pAdd" style="margin:0;width:auto;padding:0 16px">Agregar</button></div>
+    <div id="pList" style="margin-top:10px"></div>
+    <p class="mut" style="margin-top:6px">La lista se guarda en este teléfono y aparece al elegir el proyecto.</p>
   </div>
   <div class="card"><h2>Observaciones generales</h2><textarea data-k="obs" placeholder="Resumen de la visita, condiciones del sitio, coordinaciones…"></textarea></div>
   <button class="btn s" id="reset">Limpiar y empezar informe nuevo</button>
@@ -112,6 +117,17 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){try{loc
 function load(){try{const j=localStorage.getItem(KEY);if(j)S={...blank(),...JSON.parse(j)}}catch(e){}}
 function fmtF(d){if(!d)return '';const [y,m,dd]=d.split('-');return `${dd}/${m}/${y}`}
 function glob(){return S.act.length?Math.round(S.act.reduce((a,x)=>a+(+x.real||0),0)/S.act.length):0}
+
+// proyectos
+const PK='roble_proys_v1';let P=[];
+try{P=JSON.parse(localStorage.getItem(PK)||'[]')}catch(e){}
+function rP(){$('#proys').innerHTML=P.map(x=>`<option value="${esc(x)}">`).join('');
+  $('#pList').innerHTML=P.length?P.map((x,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--line)"><span>${esc(x)}</span><button class="x" data-pdel="${i}" style="float:none">Quitar</button></div>`).join(''):'<p class="mut">Aún no hay proyectos. Agrega el primero.</p>';
+  try{localStorage.setItem(PK,JSON.stringify(P))}catch(e){}}
+$('#pAdd').onclick=()=>{const v=$('#pNew').value.trim();if(!v)return;if(!P.includes(v))P.push(v);$('#pNew').value='';rP()};
+$('#pNew').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('#pAdd').click()}};
+$('#pList').onclick=e=>{const b=e.target.closest('[data-pdel]');if(b){P.splice(+b.dataset.pdel,1);rP()}};
+rP();
 
 // tabs
 $('#nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;go(+b.dataset.t)};
