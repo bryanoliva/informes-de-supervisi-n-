@@ -186,7 +186,7 @@ async function makePDF(){
   const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4'});
   const W=210,M=14,CW=W-2*M,H=297;let y=0,pg=1;
   const T=(t,x,yy,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize(o.s||9);doc.setTextColor(...(o.c||[27,36,56]));doc.text(String(t),x,yy,o.a?{align:o.a}:undefined)};
-  const wrap=(t,w,s=9)=>{doc.setFontSize(s);return doc.splitTextToSize(String(t||''),w)};
+  const wrap=(t,w,s=9)=>{doc.setFont('helvetica','normal');doc.setFontSize(s);return doc.splitTextToSize(String(t||''),w)};
   function top(){
     if(pg===1){
       const L=[['Empresa:',S.empresa],['Contacto:',S.supervisor],['Teléfono:',S.telefono],['Correo electrónico:',S.correo]];
@@ -214,7 +214,7 @@ async function makePDF(){
     doc.setFillColor(...LINE);doc.rect(M,y,CW,2.6,'F');
     doc.setFillColor(...BLUE);doc.rect(M,y,CW*(a.prog||0)/100,1.1,'F');
     const dev=(a.real||0)<(a.prog||0)-4;doc.setFillColor(...(dev?RED:GREEN));doc.rect(M,y+1.1,CW*(a.real||0)/100,1.5,'F');y+=6;
-    if(a.nota){doc.setFontSize(8);doc.setTextColor(...GREY);doc.text(nl,M,y);y+=nl.length*3.5}
+    if(a.nota){doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...GREY);doc.text(nl,M,y);y+=nl.length*3.5}
     y+=3});
   y+=2;
   // hallazgos
@@ -224,20 +224,20 @@ async function makePDF(){
     const col=h.sev==='Alta'?RED:h.sev==='Media'?[217,142,43]:GREEN;
     doc.setFillColor(248,249,252);doc.rect(M,y-3,CW,14+(dl.length+al.length)*3.8,'F');doc.setFillColor(...col);doc.rect(M,y-3,1.5,14+(dl.length+al.length)*3.8,'F');
     T(`${i+1}. ${h.tipo} · Severidad ${h.sev}`,M+4,y+1,{b:1,s:9,c:col});T(h.est,W-M-2,y+1,{b:1,s:8.5,a:'right',c:h.est==='Cerrado'?GREEN:NAVY});y+=5.5;
-    doc.setFontSize(9);doc.setTextColor(27,36,56);doc.text(dl,M+4,y);y+=dl.length*3.8;
-    if(h.acc){doc.setFontSize(8.5);doc.setTextColor(...GREY);doc.text(al,M+4,y);y+=al.length*3.8}
+    doc.setFont('helvetica','normal');doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(27,36,56);doc.text(dl,M+4,y);y+=dl.length*3.8;
+    if(h.acc){doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...GREY);doc.text(al,M+4,y);y+=al.length*3.8}
     T(`Resp.: ${h.resp||'—'}   ·   Límite: ${fmtF(h.lim)||'—'}`,M+4,y+1,{s:8,c:GREY});y+=9});
   // pendientes
-  if(S.pen.length){h2('Pendientes y acciones');S.pen.forEach(p=>{const l=wrap(p.t,CW-70,9);need(l.length*4+4);T('•',M,y);doc.setFontSize(9);doc.setTextColor(27,36,56);doc.text(l,M+4,y);T(`${p.resp||'—'}  ·  ${fmtF(p.f)||'—'}`,W-M,y,{s:8,a:'right',c:GREY});y+=l.length*4+2})}
+  if(S.pen.length){h2('Pendientes y acciones');S.pen.forEach(p=>{const l=wrap(p.t,CW-70,9);need(l.length*4+4);T('•',M,y);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(27,36,56);doc.text(l,M+4,y);T(`${p.resp||'—'}  ·  ${fmtF(p.f)||'—'}`,W-M,y,{s:8,a:'right',c:GREY});y+=l.length*4+2})}
   // obs
-  if(S.obs){const l=wrap(S.obs,CW,9);y+=2;h2('Observaciones generales',NAVY);for(const ln of l){need(5);doc.setFontSize(9);doc.setTextColor(27,36,56);doc.text(ln,M,y);y+=4}}
+  if(S.obs){const l=wrap(S.obs,CW,9);y+=2;h2('Observaciones generales',NAVY);for(const ln of l){need(5);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(27,36,56);doc.text(ln,M,y);y+=4}}
   // fotos
   if(S.fot.length){doc.addPage();pg++;top();h2('Registro fotográfico',BLUE);
     const pw=(CW-6)/2;let col=0,rowH=0;
     for(const f of S.fot){const ph=Math.min(pw*f.h/f.w,80),cl=wrap(f.c,pw,8);const bh=ph+cl.length*3.6+6;
       if(col===0){need(bh)}
       const x=M+col*(pw+6);
-      doc.addImage(f.d,'JPEG',x,y,pw,ph);doc.setFontSize(8);doc.setTextColor(...GREY);doc.text(cl,x,y+ph+4);
+      doc.addImage(f.d,'JPEG',x,y,pw,ph);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...GREY);doc.text(cl,x,y+ph+4);
       rowH=Math.max(rowH,bh);col++;
       if(col===2){col=0;y+=rowH;rowH=0}}
     if(col===1)y+=rowH}
