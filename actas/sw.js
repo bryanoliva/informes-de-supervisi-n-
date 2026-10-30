@@ -1,5 +1,5 @@
-const V='actas-gr-v1';
-const FILES=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon.svg'];
+const V='actas-gr-v2';
+const FILES=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon.svg','./jspdf.min.js','./html2canvas.min.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{

@@ -72,35 +72,36 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--g2);border-color
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}
 .modal .box{background:#fff;border-radius:14px;padding:16px;max-width:640px;width:100%}
 .modal canvas{width:100%;height:220px;border:1px solid var(--bd);border-radius:8px;touch-action:none;background:#fff;display:block}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#1d2420;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;max-width:90%;font-size:14px}
 .empty{text-align:center;color:var(--mu);padding:24px}
 /* ---------- Documento (vista previa / PDF) ---------- */
-#sheet{background:#fff;color:#000;font:10pt/1.35 Arial,Helvetica,sans-serif;padding:14mm;max-width:216mm;margin:0 auto;border:1px solid var(--bd)}
-#sheet h1{font-size:15pt;text-align:center;margin:0 0 4px;color:var(--g)}
-#sheet .sub{text-align:center;font-size:9pt;color:#555;margin-bottom:10px}
-#sheet h2{font-size:10.5pt;background:var(--g);color:#fff;padding:4px 8px;margin:14px 0 6px;break-after:avoid}
-#sheet table{width:100%;border-collapse:collapse;margin-bottom:6px}
-#sheet td,#sheet th{border:1px solid #999;padding:4px 6px;vertical-align:top;font-size:9.5pt}
-#sheet th{background:#e8f1ec;text-align:left}
-#sheet td.l{background:#f1f4f2;font-weight:700;width:17%}
-#sheet tr{break-inside:avoid}
-#sheet p{margin:6px 0;text-align:justify}
-#sheet .it{font-style:italic;font-size:9pt;color:#444}
-#sheet .sg{display:grid;gap:10px;margin-top:8px}
-#sheet .sgb{border:1px solid #999;padding:6px 8px;break-inside:avoid;font-size:9.5pt}
-#sheet .sgb .im{height:52px;display:flex;align-items:flex-end;justify-content:center;border-bottom:1px solid #000;margin-bottom:4px}
-#sheet .sgb .im img{max-height:50px;max-width:100%}
-#sheet .sgb b.h{display:block;color:var(--g);margin-bottom:4px}
-#sheet .pg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-#sheet .pg figure{margin:0;border:1px solid #999;break-inside:avoid}
-#sheet .pg img{width:100%;height:60mm;object-fit:cover;display:block}
-#sheet .pg figcaption{padding:3px 5px;font-size:9pt}
-#sheet .brk{break-before:page}
+.sheet{background:#fff;color:#000;font:10pt/1.35 Arial,Helvetica,sans-serif;padding:14mm;max-width:216mm;margin:0 auto;border:1px solid var(--bd)}
+.sheet h1{font-size:15pt;text-align:center;margin:0 0 4px;color:var(--g)}
+.sheet .sub{text-align:center;font-size:9pt;color:#555;margin-bottom:10px}
+.sheet h2{font-size:10.5pt;background:var(--g);color:#fff;padding:4px 8px;margin:14px 0 6px;break-after:avoid}
+.sheet table{width:100%;border-collapse:collapse;margin-bottom:6px}
+.sheet td,.sheet th{border:1px solid #999;padding:4px 6px;vertical-align:top;font-size:9.5pt}
+.sheet th{background:#e8f1ec;text-align:left}
+.sheet td.l{background:#f1f4f2;font-weight:700;width:17%}
+.sheet tr{break-inside:avoid}
+.sheet p{margin:6px 0;text-align:justify}
+.sheet .it{font-style:italic;font-size:9pt;color:#444}
+.sheet .sg{display:grid;gap:10px;margin-top:8px}
+.sheet .sgb{border:1px solid #999;padding:6px 8px;break-inside:avoid;font-size:9.5pt}
+.sheet .sgb .im{height:52px;display:flex;align-items:flex-end;justify-content:center;border-bottom:1px solid #000;margin-bottom:4px}
+.sheet .sgb .im img{max-height:50px;max-width:100%}
+.sheet .sgb b.h{display:block;color:var(--g);margin-bottom:4px}
+.sheet .pg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sheet .pg figure{margin:0;border:1px solid #999;break-inside:avoid}
+.sheet .pg img{width:100%;height:60mm;object-fit:cover;display:block}
+.sheet .pg figcaption{padding:3px 5px;font-size:9pt}
+.sheet .brk{break-before:page}
 @media print{
   @page{size:Letter;margin:12mm}
   body{background:#fff}
   .no-print{display:none!important}
   main{padding:0;max-width:none}
-  #sheet{border:0;padding:0;max-width:none}
+  .sheet{border:0;padding:0;max-width:none}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
@@ -384,6 +385,39 @@ function renderForm(){
   m.append(h('div',{class:'bar'},h('button',{class:'btn sec',on:{click:()=>renderPreview()}},'Vista previa / PDF'),h('button',{class:'btn',on:{click:finalizar}},cur.final?'Guardar cambios':'Finalizar acta')));
   window.scrollTo(0,y);
 }
+let libsP;
+const loadLibs=()=>libsP||(libsP=Promise.all(['jspdf.min.js','html2canvas.min.js'].map(src=>new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=src;sc.onload=res;sc.onerror=()=>rej(new Error('lib'));document.head.append(sc)}))));
+function toast(t,ms=3500){const e=h('div',{class:'toast no-print'},t);document.body.append(e);setTimeout(()=>e.remove(),ms)}
+const docName=()=>TYPES[cur.type].name.replace('Acta de ','Acta ')+' - '+([cur.d.codigo,cur.d.proyecto].filter(Boolean).join(' ')||'sin nombre');
+async function makePdf(){
+  await loadLibs();
+  const host=h('div',{class:'sheet',style:'position:fixed;left:-9999px;top:0;width:710px;max-width:none;padding:0;border:0',html:sheetHTML(cur)});
+  document.body.append(host);
+  try{
+    await new Promise(r=>setTimeout(r,150));
+    const cv=await html2canvas(host,{scale:2,backgroundColor:'#ffffff',useCORS:true,windowWidth:900});
+    const pdf=new window.jspdf.jsPDF({unit:'mm',format:'letter'});
+    const W=215.9,H=279.4,m=14,iw=W-2*m,ih=H-2*m,k=cv.width/iw,pg=Math.floor(ih*k);
+    for(let y=0,i=0;y<cv.height;y+=pg,i++){
+      const sl=document.createElement('canvas');sl.width=cv.width;sl.height=Math.min(pg,cv.height-y);
+      const c=sl.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,sl.width,sl.height);c.drawImage(cv,0,y,cv.width,sl.height,0,0,cv.width,sl.height);
+      if(i)pdf.addPage();pdf.addImage(sl.toDataURL('image/jpeg',.88),'JPEG',m,m,iw,sl.height/k);
+    }
+    return pdf.output('blob');
+  }finally{host.remove()}
+}
+async function enviar(canal){
+  toast('Generando PDF…',8000);
+  let blob;try{blob=await makePdf()}catch(e){toast('No se pudo generar el PDF. Use "Imprimir / PDF".');return}
+  const d=cur.d,name=docName(),file=new File([blob],name+'.pdf',{type:'application/pdf'});
+  const subject=name,text=[name,d.contratista?'Contratista: '+d.contratista:'',d.fechaActa?'Fecha: '+D(d.fechaActa):'','Se adjunta el acta en PDF.'].filter(Boolean).join('\n');
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:subject,text});return}}catch(e){if(e&&e.name==='AbortError')return}
+  // Respaldo (computadora): se descarga el PDF y se abre el correo / WhatsApp con el texto
+  const u=URL.createObjectURL(blob),a=h('a',{href:u,download:name+'.pdf'});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);
+  const link=canal==='mail'?'mailto:?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(text+'\n\n(Adjunte el PDF descargado)'):'https://wa.me/?text='+encodeURIComponent(text+'\n(Adjunte el PDF descargado)');
+  toast('PDF descargado. Adjúntelo en '+(canal==='mail'?'el correo':'WhatsApp')+'.',5000);
+  setTimeout(()=>{const l=h('a',{href:link,target:'_blank',rel:'noopener'});document.body.append(l);l.click();l.remove()},600);
+}
 async function finalizar(){clearTimeout(saveT);cur.final=true;cur.finalizedAt=Date.now();cur.updated=Date.now();cur.touched=true;await DB.put(cur);renderHome()}
 function renderPreview(){
   view='preview';
@@ -391,7 +425,9 @@ function renderPreview(){
   const m=document.getElementById('main');m.innerHTML='';
   const miss=missing(cur);
   if(miss.length)m.append(h('div',{class:'warn no-print'},h('b',{},'Falta: '),miss.join(', ')+'.'));
-  m.append(h('div',{id:'sheet',html:sheetHTML(cur)}));
+  m.append(h('div',{class:'card no-print'},h('div',{class:'lab',style:'margin-top:0'},'Enviar el acta en PDF'),h('div',{class:'acts'},h('button',{class:'btn sec',on:{click:()=>enviar('mail')}},'✉️ Enviar por correo'),h('button',{class:'btn sec',on:{click:()=>enviar('wa')}},'💬 Enviar por WhatsApp'))));
+  m.append(h('div',{class:'card no-print'},h('div',{class:'lab',style:'margin-top:0'},'Enviar el acta en PDF'),h('div',{class:'acts'},h('button',{class:'btn sec',on:{click:()=>enviar('mail')}},'✉️ Enviar por correo'),h('button',{class:'btn sec',on:{click:()=>enviar('wa')}},'💬 Enviar por WhatsApp'))));
+  m.append(h('div',{id:'sheet',class:'sheet',html:sheetHTML(cur)}));
   m.append(h('div',{class:'bar no-print'},h('button',{class:'btn sec',on:{click:renderForm}},'Editar'),h('button',{class:'btn sec',on:{click:printPdf}},'Imprimir / PDF'),h('button',{class:'btn',on:{click:finalizar}},cur.final?'Guardar cambios':'Finalizar acta')));
   window.scrollTo(0,0);
 }
