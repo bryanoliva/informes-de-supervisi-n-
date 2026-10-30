@@ -120,8 +120,6 @@ const addDays=(s,n)=>{if(!s||n===''||isNaN(n))return'';const d=new Date(s+'T00:0
 const addMonths=(s,n)=>{if(!s||n===''||isNaN(n))return'';const d=new Date(s+'T00:00:00');const day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+Number(n));const last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(day,last));return iso(d)};
 const D=s=>s?s.split('-').reverse().join('/'):'';
 const DT=(f,t)=>[D(f),t].filter(Boolean).join(' – ');
-const money=d=>{if(d.monto===''||d.monto==null)return'';const n=Number(d.monto).toLocaleString('es-CR',{minimumFractionDigits:2,maximumFractionDigits:2});return(d.moneda==='₡'?'₡':'USD ')+n+(d.iva?' ('+d.iva+')':'')};
-const mon2=(v,m)=>v===''||v==null?'':(m==='₡'?'₡':'USD ')+Number(v).toLocaleString('es-CR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
 /* ================= Almacenamiento (IndexedDB) ================= */
@@ -147,10 +145,10 @@ let actas=[],cur=null,view='home',saveT=null;
 const now=()=>{const d=new Date();return{f:iso(d),t:String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}};
 function newActa(type,from){
   const n=now();
-  const d={codigo:'',cat:'',proyecto:'',inmueble:'',propietario:'',contratista:'',monto:'',moneda:'USD',iva:'IVA incluido',fechaInicio:'',terminacion:'',lugar:'',fechaActa:n.f,horaActa:n.t,obs:'',anex:{},fotos:[],firma:{},tantos:'2'};
+  const d={codigo:'',cat:'',proyecto:'',inmueble:'',propietario:'',contratista:'',fechaInicio:'',terminacion:'',lugar:'',fechaActa:n.f,horaActa:n.t,obs:'',anex:{},fotos:[],firma:{},tantos:'2'};
   if(type==='inicio'){d.plazo='';d.req={};d.sitio={};d.rep={};d.dia='';d.hora='';}
-  else{d.cliente='';d.inspeccion='';d.ocN='';d.ocMonto='';d.tipo='';d.res='';d.dCorr='';d.fCorr='';d.motivos='';d.fNueva='';d.ver={};d.punch=[{},{},{}];d.solic=[{}];d.gInicio='';d.gMeses='';d.retencion='';d.gFin='';d.tantos='3'}
-  if(from){for(const k of['codigo','cat','proyecto','inmueble','propietario','contratista','monto','moneda','iva','fechaInicio','terminacion','lugar'])d[k]=from.d[k];
+  else{d.cliente='';d.inspeccion='';d.ocN='';d.tipo='';d.res='';d.dCorr='';d.fCorr='';d.motivos='';d.fNueva='';d.ver={};d.punch=[{},{},{}];d.solic=[{}];d.gInicio='';d.gMeses='';d.gFin='';d.tantos='3'}
+  if(from){for(const k of['codigo','cat','proyecto','inmueble','propietario','contratista','fechaInicio','terminacion','lugar'])d[k]=from.d[k];
     if(type==='recepcion'&&from.type==='inicio'){d.inspeccion=getp(from.d,'rep.1.n')||'';for(const k of['gr1','gr2','gr3','co1','co2','co3']){const f=from.d.firma[k];if(f&&f.nombre)d.firma[k]={nombre:f.nombre}}}}
   return{id:uid(),type,created:Date.now(),updated:Date.now(),d};
 }
@@ -246,9 +244,8 @@ function datosGenerales(){
   if(t==='recepcion')g.append(F('Cliente / Inquilino','cliente',{ph:'Razón social o N.A.'}));
   g.append(F('Contratista','contratista',{ph:'Razón social'}));
   if(t==='recepcion')g.append(F('Inspección / Supervisión','inspeccion',{ph:'Nombre / empresa'}));
-  g.append(F('Monto contratado','monto',{type:'number',im:'decimal',step:'0.01',ph:'0.00'}),F('Moneda','moneda',{type:'select',opts:['USD','₡']}),F('IVA','iva',{type:'select',opts:['IVA incluido','IVA excluido']}));
   if(t==='inicio')g.append(F('Plazo contractual (días naturales)','plazo',{type:'number',im:'numeric'}));
-  else g.append(F('Órdenes de cambio aprobadas (N.º)','ocN',{type:'number',im:'numeric'}),F('Monto total de órdenes de cambio','ocMonto',{type:'number',im:'decimal',step:'0.01'}));
+  else g.append(F('Órdenes de cambio aprobadas (N.º)','ocN',{type:'number',im:'numeric'}));
   g.append(F('Fecha de inicio','fechaInicio',{type:'date'}),F('Terminación contractual','terminacion',{type:'date'}),F('Lugar','lugar',{ph:'Dirección del sitio'}),F('Fecha del acta','fechaActa',{type:'date'}),F('Hora del acta','horaActa',{type:'time'}));
   const box=h('div',{},g);
   if(t==='recepcion'){box.append(h('span',{class:'lab'},'Tipo de recepción'),S('tipo',['Provisional','Definitiva']))}
@@ -285,7 +282,7 @@ function formRecepcion(){
      h('div',{class:'note'},'La Inspección designada por Grupo Roble detalla los pendientes y da el V.° B. de cierre de cada ítem. Seguimiento semanal hasta punch list en cero.')),
    sec(5,'Solicitudes adicionales en la entrega',dyn('solic',i=>h('div',{class:'grid'},F('Solicitud del cliente / inquilino','solic.'+i+'.txt',{type:'area',rows:2}),h('div',{},h('span',{class:'lab',style:'margin-top:0'},'¿Orden de cambio?'),S('solic.'+i+'.oc',['Sí','No'])),F('Observación','solic.'+i+'.obs')),'Solicitud'),
      h('div',{class:'note'},'Las solicitudes del cliente que no forman parte del alcance contratado no son pendientes de la obra: se cotizan y aprueban por el cliente mediante orden de cambio antes de ejecutarse.')),
-   sec(6,'Garantías y retenciones',h('div',{class:'grid'},F('Inicio del período de garantía (recepción provisional)','gInicio',{type:'date'}),F('Plazo de garantía de la obra (meses)','gMeses',{type:'number',im:'numeric'}),F('Retención a devolver','retencion',{type:'number',im:'decimal',step:'0.01'}),F('Fecha prevista de recepción definitiva','gFin',{type:'date'}))),
+   sec(6,'Garantías y retenciones',h('div',{class:'grid'},F('Inicio del período de garantía (recepción provisional)','gInicio',{type:'date'}),F('Plazo de garantía de la obra (meses)','gMeses',{type:'number',im:'numeric'}),F('Fecha prevista de recepción definitiva','gFin',{type:'date'}))),
    sec(7,'Observaciones',F(null,'obs',{type:'area',rows:5})),
    sec(8,'Anexos',ANX_R.map((t,i)=>C(t,'anex.'+i)),h('span',{class:'lab'},'Anexo 1 · Registro fotográfico del punch list'),photos()),
    sec(9,'Firmas',F('Tantos de igual valor','tantos',{type:'number',im:'numeric'}),firmas([['Por Grupo Roble',SIG_R.gr,'gr'],['Por el contratista',SIG_R.co,'co'],['Por el cliente / inquilino',SIG_R.cl,'cl']])));
@@ -306,7 +303,7 @@ function sheetHTML(a){
   <tr><td class="l">Proyecto</td><td>${E(d.proyecto)}</td><td class="l">Inmueble</td><td>${E(d.inmueble)}</td></tr>
   <tr><td class="l">Propietario</td><td>${E(d.propietario)}${d.propietario?' ':''}(Grupo Roble)</td><td class="l">${t==='inicio'?'Contratista':'Cliente / Inquilino'}</td><td>${E(t==='inicio'?d.contratista:d.cliente)}</td></tr>`;
   if(t==='recepcion')s+=`<tr><td class="l">Contratista</td><td>${E(d.contratista)}</td><td class="l">Inspección / Supervisión</td><td>${E(d.inspeccion)}</td></tr>`;
-  s+=`<tr><td class="l">Monto contratado</td><td>${E(money(d))}</td><td class="l">${t==='inicio'?'Plazo contractual':'Órdenes de cambio aprobadas'}</td><td>${t==='inicio'?(d.plazo?E(d.plazo)+' días naturales':''):(d.ocN?E(d.ocN)+' por '+E(mon2(d.ocMonto,d.moneda)):'')}</td></tr>
+  s+=`<tr><td class="l">${t==='inicio'?'Plazo contractual':'Órdenes de cambio aprobadas'}</td><td colspan="3">${t==='inicio'?(d.plazo?E(d.plazo)+' días naturales':''):E(d.ocN)}</td></tr>
   <tr><td class="l">Fecha de inicio</td><td>${D(d.fechaInicio)}</td><td class="l">Terminación contractual</td><td>${D(d.terminacion)}</td></tr>
   <tr><td class="l">Lugar</td><td>${E(d.lugar)}</td><td class="l">Fecha y hora del acta</td><td>${DT(d.fechaActa,d.horaActa)}</td></tr></table>`;
   if(t==='recepcion')s+=`<table><tr><td class="l">Tipo de recepción</td><td>${opt(d.tipo,['Provisional','Definitiva'])}</td></tr></table>`;
@@ -333,7 +330,7 @@ function sheetHTML(a){
     s+=`<h2>4. PUNCH LIST</h2><table><tr><th style="width:6%">N.º</th><th>Descripción del pendiente</th><th>Ubicación</th><th>Responsable</th><th>Fecha compromiso</th><th>Cierre (fecha y V.° B.°)</th></tr>${(pl.length?pl:[{}]).map((p,i)=>`<tr><td>${pl.length?i+1:''}</td><td>${E(p.desc).replace(/\n/g,'<br>')}</td><td>${E(p.ubic)}</td><td>${E(p.resp)}</td><td>${D(p.fecha)}</td><td>${[D(p.cierre),E(p.vb)].filter(Boolean).join(' · ')}</td></tr>`).join('')}</table><p class="it">La Inspección designada por Grupo Roble detalla los pendientes y da el V.° B.° de cierre de cada ítem. Seguimiento semanal hasta punch list en cero.</p>`;
     const sl=d.solic.filter(p=>Object.values(p).some(Boolean));
     s+=`<h2>5. SOLICITUDES ADICIONALES EN LA ENTREGA</h2><table><tr><th style="width:6%">N.º</th><th>Solicitud del cliente / inquilino</th><th style="width:20%">¿Orden de cambio?</th><th>Observación</th></tr>${(sl.length?sl:[{}]).map((p,i)=>`<tr><td>${sl.length?i+1:''}</td><td>${E(p.txt).replace(/\n/g,'<br>')}</td><td>${opt(p.oc,['Sí','No'])}</td><td>${E(p.obs)}</td></tr>`).join('')}</table><p class="it">Las solicitudes del cliente que no forman parte del alcance contratado no son pendientes de la obra: se cotizan y aprueban por el cliente mediante orden de cambio antes de ejecutarse.</p>`;
-    s+=`<h2>6. GARANTÍAS Y RETENCIONES</h2><table><tr><td class="l" style="width:34%">Inicio del período de garantía</td><td>${d.gInicio?D(d.gInicio):'[dd/mm/aaaa]'} (fecha de recepción provisional)</td></tr><tr><td class="l">Plazo de garantía de la obra</td><td>${ln(d.gMeses,'[__]')} meses</td></tr><tr><td class="l">Retención a devolver</td><td>${d.retencion!==''?E(mon2(d.retencion,d.moneda)):'[USD / ₡]'} contra garantía de calidad / vicios ocultos</td></tr><tr><td class="l">Fecha prevista de recepción definitiva</td><td>${d.gFin?D(d.gFin):'[dd/mm/aaaa]'}</td></tr></table>`;
+    s+=`<h2>6. GARANTÍAS Y RETENCIONES</h2><table><tr><td class="l" style="width:34%">Inicio del período de garantía</td><td>${d.gInicio?D(d.gInicio):'[dd/mm/aaaa]'} (fecha de recepción provisional)</td></tr><tr><td class="l">Plazo de garantía de la obra</td><td>${ln(d.gMeses,'[__]')} meses</td></tr><tr><td class="l">Fecha prevista de recepción definitiva</td><td>${d.gFin?D(d.gFin):'[dd/mm/aaaa]'}</td></tr></table>`;
     s+=`<h2>7. OBSERVACIONES</h2><table><tr><td style="height:40px">${E(d.obs).replace(/\n/g,'<br>')}</td></tr></table>`;
     s+=`<h2>8. ANEXOS</h2><p>${ANX_R.map((x,i)=>bx(d.anex[i])+' '+x).join('<br>')}</p>`;
     s+=`<h2>9. FIRMAS</h2><p>Leída la presente acta, las partes manifiestan su conformidad y firman en ${ln(d.tantos)} tantos de igual valor.</p><div class="sg" style="grid-template-columns:repeat(3,1fr)"><b>POR GRUPO ROBLE</b><b>POR EL CONTRATISTA</b><b>POR EL CLIENTE / INQUILINO</b>${[0,1,2].map(i=>sigHTML([SIG_R.gr[i]],d)+sigHTML([SIG_R.co[i]],d)+(SIG_R.cl[i]?sigHTML([SIG_R.cl[i]],d):'<div></div>')).join('')}</div>`;
