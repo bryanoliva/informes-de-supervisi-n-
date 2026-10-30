@@ -152,7 +152,7 @@ function newActa(type,from){
     if(type==='recepcion'&&from.type==='inicio'){d.inspeccion=getp(from.d,'rep.1.n')||'';for(const k of['gr1','gr2','gr3','co1','co2','co3']){const f=from.d.firma[k];if(f&&f.nombre)d.firma[k]={nombre:f.nombre}}}}
   return{id:uid(),type,created:Date.now(),updated:Date.now(),d};
 }
-function save(){clearTimeout(saveT);const s=document.getElementById('st');if(s)s.textContent='Guardando…';saveT=setTimeout(async()=>{if(!cur)return;cur.updated=Date.now();await DB.put(cur);const s=document.getElementById('st');if(s)s.textContent='Guardado ✓'},350)}
+function save(){clearTimeout(saveT);const s=document.getElementById('st');if(s)s.textContent='Guardando…';cur&&(cur.touched=true);saveT=setTimeout(async()=>{if(!cur)return;cur.updated=Date.now();await DB.put(cur);const s=document.getElementById('st');if(s)s.textContent='Guardado ✓'},350)}
 function setD(path,val){setp(cur.d,path,val);const el=document.querySelector('[data-path="'+path+'"]');if(el)el.value=val}
 function onChange(path){
   const d=cur.d;
@@ -346,20 +346,27 @@ function topbar(title,left,right){const t=document.getElementById('top');t.inner
 function confirmBox(msg,ok){const m=h('div',{class:'modal'},h('div',{class:'box'},h('p',{style:'margin-top:0'},msg),h('div',{style:'display:flex;gap:8px;justify-content:flex-end'},h('button',{class:'btn sec',on:{click:()=>m.remove()}},'Cancelar'),h('button',{class:'btn danger',on:{click:()=>{m.remove();ok()}}},'Eliminar'))));document.body.append(m)}
 function label(a){const d=a.d;return[d.codigo,d.proyecto].filter(Boolean).join(' · ')||'(Sin nombre)'}
 async function reload(){actas=(await DB.all()).sort((a,b)=>b.updated-a.updated)}
+function actaCard(a,m){
+  const acts=h('div',{class:'acts'},
+    h('button',{class:'btn sec sm',on:{click:()=>open(a)}},a.final?'Abrir':'Continuar'),
+    a.final&&a.type==='inicio'?h('button',{class:'btn sec sm',on:{click:()=>open(newActa('recepcion',a))}},'→ Crear Recepción'):null,
+    a.final?h('button',{class:'btn sec sm',on:{click:async()=>{const c=JSON.parse(JSON.stringify(a));c.id=uid();c.final=false;delete c.finalizedAt;c.updated=Date.now();await DB.put(c);renderHome()}}},'Duplicar'):null,
+    h('button',{class:'btn danger sm',on:{click:()=>confirmBox('¿Eliminar "'+label(a)+'"? No se puede deshacer.',async()=>{await DB.del(a.id);renderHome()})}},'Eliminar'));
+  m.append(h('div',{class:'card'},h('div',{class:'item'},h('div',{},h('div',{class:'t'},h('span',{class:'badge'+(a.type==='recepcion'?' r':'')},TYPES[a.type].short),label(a)),h('div',{class:'s'},[a.d.contratista,D(a.d.fechaActa)].filter(Boolean).join(' · ')))),h('div',{style:'height:8px'}),acts));
+}
 async function renderHome(){
   view='home';cur=null;document.title='Actas de Obra · Grupo Roble';await reload();
+  // limpiar borradores totalmente vacíos
+  for(const a of actas.filter(a=>!a.final&&!a.d.codigo&&!a.d.proyecto&&!a.d.contratista&&!(a.d.fotos||[]).length))await DB.del(a.id);
+  await reload();
+  const fin=actas.filter(a=>a.final).sort((a,b)=>(b.finalizedAt||0)-(a.finalizedAt||0)),dr=actas.filter(a=>!a.final);
   topbar('Actas de Obra · Grupo Roble');
   const m=document.getElementById('main');m.innerHTML='';
   m.append(h('div',{class:'newbtns'},h('button',{class:'btn',on:{click:()=>open(newActa('inicio'))}},'＋ Acta de Inicio'),h('button',{class:'btn',on:{click:()=>open(newActa('recepcion'))}},'＋ Acta de Recepción')));
-  if(!actas.length)m.append(h('div',{class:'empty card'},'Aún no hay actas. Cree la primera con los botones de arriba.'));
-  for(const a of actas){
-    const acts=h('div',{class:'acts'},
-      h('button',{class:'btn sec sm',on:{click:()=>open(a)}},'Abrir'),
-      a.type==='inicio'?h('button',{class:'btn sec sm',on:{click:()=>open(newActa('recepcion',a))}},'→ Crear Recepción'):null,
-      h('button',{class:'btn sec sm',on:{click:async()=>{const c=JSON.parse(JSON.stringify(a));c.id=uid();c.updated=Date.now();await DB.put(c);renderHome()}}},'Duplicar'),
-      h('button',{class:'btn danger sm',on:{click:()=>confirmBox('¿Eliminar "'+label(a)+'"? No se puede deshacer.',async()=>{await DB.del(a.id);renderHome()})}},'Eliminar'));
-    m.append(h('div',{class:'card'},h('div',{class:'item'},h('div',{},h('div',{class:'t'},h('span',{class:'badge'+(a.type==='recepcion'?' r':'')},TYPES[a.type].short),label(a)),h('div',{class:'s'},[a.d.contratista,D(a.d.fechaActa)].filter(Boolean).join(' · ')))),h('div',{style:'height:8px'}),acts));
-  }
+  m.append(h('span',{class:'lab'},'Actas finalizadas ('+fin.length+')'));
+  if(!fin.length)m.append(h('div',{class:'empty card'},'Las actas aparecerán aquí cuando las finalice.'));
+  fin.forEach(a=>actaCard(a,m));
+  if(dr.length){m.append(h('span',{class:'lab',style:'margin-top:18px'},'Borradores en proceso ('+dr.length+')'));dr.forEach(a=>actaCard(a,m))}
   m.append(h('div',{class:'card'},h('div',{class:'lab',style:'margin-top:0'},'Respaldo'),h('div',{class:'acts'},
     h('button',{class:'btn sec sm',on:{click:exportAll}},'Exportar respaldo (.json)'),
     h('button',{class:'btn sec sm',on:{click:()=>imp.click()}},'Importar respaldo'))));
@@ -368,10 +375,10 @@ const imp=h('input',{type:'file',accept:'application/json',style:'display:none'}
 imp.addEventListener('change',async()=>{try{const arr=JSON.parse(await imp.files[0].text());for(const a of arr)if(a&&a.id&&a.type&&a.d)await DB.put(a);renderHome()}catch(e){}imp.value=''});
 document.body.append(imp);
 function exportAll(){const b=new Blob([JSON.stringify(actas)],{type:'application/json'});const u=URL.createObjectURL(b);const a=h('a',{href:u,download:'actas-grupo-roble-'+iso(new Date())+'.json'});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)}
-function open(a){cur=a;if(!actas.find(x=>x.id===a.id))DB.put(a);renderForm()}
+function open(a){cur=a;renderForm()}
 function renderForm(){
   const y=window.scrollY;view='form';
-  topbar(TYPES[cur.type].name,h('button',{class:'btn ghost',on:{click:async()=>{await DB.put(cur);renderHome()}}},'‹ Actas'),h('span',{class:'st',id:'st'},'Guardado ✓'));
+  topbar(TYPES[cur.type].name,h('button',{class:'btn ghost',on:{click:async()=>{if(cur.touched)await DB.put(cur);renderHome()}}},'‹ Actas'),h('span',{class:'st',id:'st'},'Guardado ✓'));
   const m=document.getElementById('main');m.innerHTML='';
   m.append(cur.type==='inicio'?formInicio():formRecepcion());
   m.append(h('div',{class:'bar'},h('button',{class:'btn',on:{click:()=>renderPreview()}},'Vista previa / PDF')));
@@ -384,7 +391,7 @@ function renderPreview(){
   const miss=missing(cur);
   if(miss.length)m.append(h('div',{class:'warn no-print'},h('b',{},'Falta: '),miss.join(', ')+'.'));
   m.append(h('div',{id:'sheet',html:sheetHTML(cur)}));
-  m.append(h('div',{class:'bar no-print'},h('button',{class:'btn sec',on:{click:renderForm}},'Editar'),h('button',{class:'btn',on:{click:printPdf}},'Imprimir / Guardar PDF')));
+  m.append(h('div',{class:'bar no-print'},h('button',{class:'btn sec',on:{click:renderForm}},'Editar'),h('button',{class:'btn sec',on:{click:printPdf}},'Imprimir / PDF'),h('button',{class:'btn',on:{click:async()=>{cur.final=true;cur.finalizedAt=Date.now();cur.updated=Date.now();cur.touched=true;await DB.put(cur);renderHome()}}},cur.final?'Guardar cambios':'Finalizar acta')));
   window.scrollTo(0,0);
 }
 function printPdf(){const old=document.title;document.title=TYPES[cur.type].name.replace('Acta de ','Acta ')+' - '+[cur.d.codigo,cur.d.proyecto].filter(Boolean).join(' ');try{window.print()}catch(e){}setTimeout(()=>document.title=old,1500)}
