@@ -381,9 +381,10 @@ function renderForm(){
   topbar(TYPES[cur.type].name,h('button',{class:'btn ghost',on:{click:async()=>{if(cur.touched)await DB.put(cur);renderHome()}}},'‹ Actas'),h('span',{class:'st',id:'st'},'Guardado ✓'));
   const m=document.getElementById('main');m.innerHTML='';
   m.append(cur.type==='inicio'?formInicio():formRecepcion());
-  m.append(h('div',{class:'bar'},h('button',{class:'btn',on:{click:()=>renderPreview()}},'Vista previa / PDF')));
+  m.append(h('div',{class:'bar'},h('button',{class:'btn sec',on:{click:()=>renderPreview()}},'Vista previa / PDF'),h('button',{class:'btn',on:{click:finalizar}},cur.final?'Guardar cambios':'Finalizar acta')));
   window.scrollTo(0,y);
 }
+async function finalizar(){clearTimeout(saveT);cur.final=true;cur.finalizedAt=Date.now();cur.updated=Date.now();cur.touched=true;await DB.put(cur);renderHome()}
 function renderPreview(){
   view='preview';
   topbar('Vista previa',h('button',{class:'btn ghost',on:{click:renderForm}},'‹ Editar'));
@@ -391,7 +392,7 @@ function renderPreview(){
   const miss=missing(cur);
   if(miss.length)m.append(h('div',{class:'warn no-print'},h('b',{},'Falta: '),miss.join(', ')+'.'));
   m.append(h('div',{id:'sheet',html:sheetHTML(cur)}));
-  m.append(h('div',{class:'bar no-print'},h('button',{class:'btn sec',on:{click:renderForm}},'Editar'),h('button',{class:'btn sec',on:{click:printPdf}},'Imprimir / PDF'),h('button',{class:'btn',on:{click:async()=>{cur.final=true;cur.finalizedAt=Date.now();cur.updated=Date.now();cur.touched=true;await DB.put(cur);renderHome()}}},cur.final?'Guardar cambios':'Finalizar acta')));
+  m.append(h('div',{class:'bar no-print'},h('button',{class:'btn sec',on:{click:renderForm}},'Editar'),h('button',{class:'btn sec',on:{click:printPdf}},'Imprimir / PDF'),h('button',{class:'btn',on:{click:finalizar}},cur.final?'Guardar cambios':'Finalizar acta')));
   window.scrollTo(0,0);
 }
 function printPdf(){const old=document.title;document.title=TYPES[cur.type].name.replace('Acta de ','Acta ')+' - '+[cur.d.codigo,cur.d.proyecto].filter(Boolean).join(' ');try{window.print()}catch(e){}setTimeout(()=>document.title=old,1500)}
