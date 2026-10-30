@@ -147,7 +147,7 @@ function newActa(type,from){
   const n=now();
   const d={codigo:'',cat:'',proyecto:'',inmueble:'',propietario:'',contratista:'',fechaInicio:'',terminacion:'',lugar:'',fechaActa:n.f,horaActa:n.t,obs:'',anex:{},fotos:[],firma:{},tantos:'2'};
   if(type==='inicio'){d.plazo='';d.req={};d.sitio={};d.rep={};d.dia='';d.hora='';}
-  else{d.cliente='';d.inspeccion='';d.ocN='';d.tipo='';d.res='';d.dCorr='';d.fCorr='';d.motivos='';d.fNueva='';d.ver={};d.punch=[{},{},{}];d.solic=[{}];d.gInicio='';d.gMeses='';d.gFin='';d.tantos='3'}
+  else{d.cliente='';d.inspeccion='';d.tipo='';d.res='';d.dCorr='';d.fCorr='';d.motivos='';d.fNueva='';d.ver={};d.punch=[{},{},{}];d.solic=[{}];d.gInicio='';d.gMeses='';d.gFin='';d.tantos='3'}
   if(from){for(const k of['codigo','cat','proyecto','inmueble','propietario','contratista','fechaInicio','terminacion','lugar'])d[k]=from.d[k];
     if(type==='recepcion'&&from.type==='inicio'){d.inspeccion=getp(from.d,'rep.1.n')||'';for(const k of['gr1','gr2','gr3','co1','co2','co3']){const f=from.d.firma[k];if(f&&f.nombre)d.firma[k]={nombre:f.nombre}}}}
   return{id:uid(),type,created:Date.now(),updated:Date.now(),d};
@@ -245,7 +245,6 @@ function datosGenerales(){
   g.append(F('Contratista','contratista',{ph:'Razón social'}));
   if(t==='recepcion')g.append(F('Inspección / Supervisión','inspeccion',{ph:'Nombre / empresa'}));
   if(t==='inicio')g.append(F('Plazo contractual (días naturales)','plazo',{type:'number',im:'numeric'}));
-  else g.append(F('Órdenes de cambio aprobadas (N.º)','ocN',{type:'number',im:'numeric'}));
   g.append(F('Fecha de inicio','fechaInicio',{type:'date'}),F('Terminación contractual','terminacion',{type:'date'}),F('Lugar','lugar',{ph:'Dirección del sitio'}),F('Fecha del acta','fechaActa',{type:'date'}),F('Hora del acta','horaActa',{type:'time'}));
   const box=h('div',{},g);
   if(t==='recepcion'){box.append(h('span',{class:'lab'},'Tipo de recepción'),S('tipo',['Provisional','Definitiva']))}
@@ -303,7 +302,7 @@ function sheetHTML(a){
   <tr><td class="l">Proyecto</td><td>${E(d.proyecto)}</td><td class="l">Inmueble</td><td>${E(d.inmueble)}</td></tr>
   <tr><td class="l">Propietario</td><td>${E(d.propietario)}${d.propietario?' ':''}(Grupo Roble)</td><td class="l">${t==='inicio'?'Contratista':'Cliente / Inquilino'}</td><td>${E(t==='inicio'?d.contratista:d.cliente)}</td></tr>`;
   if(t==='recepcion')s+=`<tr><td class="l">Contratista</td><td>${E(d.contratista)}</td><td class="l">Inspección / Supervisión</td><td>${E(d.inspeccion)}</td></tr>`;
-  s+=`<tr><td class="l">${t==='inicio'?'Plazo contractual':'Órdenes de cambio aprobadas'}</td><td colspan="3">${t==='inicio'?(d.plazo?E(d.plazo)+' días naturales':''):E(d.ocN)}</td></tr>
+  s+=`${t==='inicio'?`<tr><td class="l">Plazo contractual</td><td colspan="3">${d.plazo?E(d.plazo)+' días naturales':''}</td></tr>`:''}
   <tr><td class="l">Fecha de inicio</td><td>${D(d.fechaInicio)}</td><td class="l">Terminación contractual</td><td>${D(d.terminacion)}</td></tr>
   <tr><td class="l">Lugar</td><td>${E(d.lugar)}</td><td class="l">Fecha y hora del acta</td><td>${DT(d.fechaActa,d.horaActa)}</td></tr></table>`;
   if(t==='recepcion')s+=`<table><tr><td class="l">Tipo de recepción</td><td>${opt(d.tipo,['Provisional','Definitiva'])}</td></tr></table>`;
