@@ -188,9 +188,9 @@ let actas=[],cur=null,view='home',saveT=null;
 const now=()=>{const d=new Date();return{f:iso(d),t:String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}};
 function newActa(type,from){
   const n=now();
-  const d={codigo:'',cat:'',proyecto:'',inmueble:'',propietario:'',contratista:'',fechaInicio:'',terminacion:'',lugar:'',fechaActa:n.f,horaActa:n.t,obs:'',anex:{},fotos:[],firma:{},tantos:'2',dest:'',wa:''};
+  const d={codigo:'',cat:'',proyecto:'',inmueble:'',propietario:'',contratista:'',fechaInicio:'',terminacion:'',lugar:'',fechaActa:n.f,horaActa:n.t,obs:'',anex:{},fotos:[],firma:{},dest:'',wa:''};
   if(type==='inicio'){d.plazo='';d.req={};d.sitio={};d.rep={};d.dia='';d.hora='';}
-  else{d.cliente='';d.inspeccion='';d.tipo='';d.res='';d.dCorr='';d.fCorr='';d.motivos='';d.fNueva='';d.ver={};d.punch=[{},{},{}];d.solic=[{}];d.gInicio='';d.gMeses='';d.gFin='';d.tantos='3'}
+  else{d.cliente='';d.inspeccion='';d.tipo='';d.res='';d.dCorr='';d.fCorr='';d.motivos='';d.fNueva='';d.ver={};d.punch=[{},{},{}];d.solic=[{}];d.gInicio='';d.gMeses='';d.gFin='';}
   if(from){for(const k of['codigo','cat','proyecto','inmueble','propietario','contratista','fechaInicio','terminacion','lugar','cliente','dest','wa'])d[k]=from.d[k]??d[k];
     if(type==='recepcion'&&from.type==='inicio'){d.inspeccion=getp(from.d,'rep.1.n')||'';for(const k of['gr1','gr2','gr3','co1','co2','co3']){const f=from.d.firma[k];if(f&&f.nombre)d.firma[k]={nombre:f.nombre}}}}
   return{id:uid(),type,created:Date.now(),updated:Date.now(),hist:[],d};
@@ -332,7 +332,7 @@ function formInicio(){
      h('div',{class:'note'},'Canales acordados (texto fijo del formato): bitácora de obra; reunión de obra semanal con acta; instrucciones al contratista solo por los canales del contrato; todo correo y documento lleva el código del proyecto; los acuerdos verbales se confirman por escrito en 24 horas.')),
    sec(5,'Observaciones',F(null,'obs',{type:'area',rows:5})),
    sec(6,'Anexos',ANX_I.map((t,i)=>C(t,'anex.'+i)),h('span',{class:'lab'},'Anexo 1 · Registro fotográfico de condiciones existentes'),photos()),
-   sec(7,'Firmas',F('Tantos de igual valor','tantos',{type:'number',im:'numeric'}),firmas([['Por Grupo Roble',SIG_I.gr,'gr'],['Por el contratista',SIG_I.co,'co']])));
+   sec(7,'Firmas',firmas([['Por Grupo Roble',SIG_I.gr,'gr'],['Por el contratista',SIG_I.co,'co']])));
   m.append(envioCard());
   return m;
 }
@@ -356,7 +356,7 @@ function formRecepcion(){
    sec(6,'Garantías y retenciones',h('div',{class:'grid'},F('Inicio del período de garantía (recepción provisional)','gInicio',{type:'date'}),F('Plazo de garantía de la obra (meses)','gMeses',{type:'number',im:'numeric'}),F('Fecha prevista de recepción definitiva','gFin',{type:'date'}))),
    sec(7,'Observaciones',F(null,'obs',{type:'area',rows:5})),
    sec(8,'Anexos',ANX_R.map((t,i)=>C(t,'anex.'+i)),h('span',{class:'lab'},'Anexo 1 · Registro fotográfico del punch list'),photos()),
-   sec(9,'Firmas',F('Tantos de igual valor','tantos',{type:'number',im:'numeric'}),firmas([['Por Grupo Roble',SIG_R.gr,'gr'],['Por el contratista',SIG_R.co,'co'],['Por el cliente / inquilino',SIG_R.cl,'cl']])));
+   sec(9,'Firmas',firmas([['Por Grupo Roble',SIG_R.gr,'gr'],['Por el contratista',SIG_R.co,'co'],['Por el cliente / inquilino',SIG_R.cl,'cl']])));
   m.append(envioCard());
   return m;
 }
@@ -389,7 +389,7 @@ function sheetHTML(a){
     <p><b>Canales acordados:</b> bitácora de obra; reunión de obra semanal el ${ln(d.dia,'[día]')} a las ${ln(d.hora,'[hora]')} con acta; instrucciones al contratista solo por los canales del contrato; todo correo y documento lleva el código del proyecto; los acuerdos verbales se confirman por escrito en 24 horas.</p>`;
     s+=`<h2>5. OBSERVACIONES</h2><table><tr><td style="height:40px">${E(d.obs).replace(/\n/g,'<br>')}</td></tr></table>`;
     s+=`<h2>6. ANEXOS</h2><p>${ANX_I.map((x,i)=>bx(d.anex[i])+' '+x).join('<br>')}</p>`;
-    s+=`<h2>7. FIRMAS</h2><p>Leída la presente acta, las partes manifiestan su conformidad y firman en ${ln(d.tantos)} tantos de igual valor.</p><div class="sg" style="grid-template-columns:1fr 1fr"><b>POR GRUPO ROBLE</b><b>POR EL CONTRATISTA</b>${[0,1,2].map(i=>sigHTML([SIG_I.gr[i]],d)+sigHTML([SIG_I.co[i]],d)).join('')}</div>`;
+    s+=`<h2>7. FIRMAS</h2><p>Leída la presente acta, las partes manifiestan su conformidad y firman.</p><div class="sg" style="grid-template-columns:1fr 1fr"><b>POR GRUPO ROBLE</b><b>POR EL CONTRATISTA</b>${[0,1,2].map(i=>sigHTML([SIG_I.gr[i]],d)+sigHTML([SIG_I.co[i]],d)).join('')}</div>`;
     s+=photosHTML(d,'ANEXO 1: REGISTRO FOTOGRÁFICO DE CONDICIONES EXISTENTES');
   }else{
     const hasCl=d.cliente&&d.cliente.trim()&&d.cliente.trim().toUpperCase()!=='N.A.';
@@ -407,7 +407,7 @@ function sheetHTML(a){
     s+=`<h2>6. GARANTÍAS Y RETENCIONES</h2><table><tr><td class="l" style="width:34%">Inicio del período de garantía</td><td>${d.gInicio?D(d.gInicio):'[dd/mm/aaaa]'} (fecha de recepción provisional)</td></tr><tr><td class="l">Plazo de garantía de la obra</td><td>${ln(d.gMeses,'[__]')} meses</td></tr><tr><td class="l">Fecha prevista de recepción definitiva</td><td>${d.gFin?D(d.gFin):'[dd/mm/aaaa]'}</td></tr></table>`;
     s+=`<h2>7. OBSERVACIONES</h2><table><tr><td style="height:40px">${E(d.obs).replace(/\n/g,'<br>')}</td></tr></table>`;
     s+=`<h2>8. ANEXOS</h2><p>${ANX_R.map((x,i)=>bx(d.anex[i])+' '+x).join('<br>')}</p>`;
-    s+=`<h2>9. FIRMAS</h2><p>Leída la presente acta, las partes manifiestan su conformidad y firman en ${ln(d.tantos)} tantos de igual valor.</p><div class="sg" style="grid-template-columns:repeat(3,1fr)"><b>POR GRUPO ROBLE</b><b>POR EL CONTRATISTA</b><b>POR EL CLIENTE / INQUILINO</b>${[0,1,2].map(i=>sigHTML([SIG_R.gr[i]],d)+sigHTML([SIG_R.co[i]],d)+(SIG_R.cl[i]?sigHTML([SIG_R.cl[i]],d):'<div></div>')).join('')}</div>`;
+    s+=`<h2>9. FIRMAS</h2><p>Leída la presente acta, las partes manifiestan su conformidad y firman.</p><div class="sg" style="grid-template-columns:repeat(3,1fr)"><b>POR GRUPO ROBLE</b><b>POR EL CONTRATISTA</b><b>POR EL CLIENTE / INQUILINO</b>${[0,1,2].map(i=>sigHTML([SIG_R.gr[i]],d)+sigHTML([SIG_R.co[i]],d)+(SIG_R.cl[i]?sigHTML([SIG_R.cl[i]],d):'<div></div>')).join('')}</div>`;
     s+=photosHTML(d,'ANEXO 1: REGISTRO FOTOGRÁFICO DEL PUNCH LIST');
   }
   if(a.final){const mods=(a.hist||[]).filter(x=>x.a==='Reabierta').length;s+=`<p class="it">${numTxt(a)?E(numTxt(a))+' · ':''}Finalizada el ${fdt(a.finalizedAt)}${mods?' · Modificada '+mods+(mods>1?' veces':' vez')+' tras su primera finalización':''}.</p>`}
