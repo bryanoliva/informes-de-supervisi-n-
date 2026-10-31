@@ -48,6 +48,10 @@ nav button.on{color:var(--blue);box-shadow:inset 0 3px 0 var(--blue)}
 .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .row3 .btn{margin-top:8px;padding:10px 4px;font-size:13px}
 nav button{font-size:10px}
+.mw{position:relative}.mw textarea,.mw input{padding-right:52px}
+.mic{position:absolute;right:6px;bottom:6px;width:38px;height:38px;border-radius:50%;border:0;background:var(--blue);color:#fff;font-size:17px;cursor:pointer}
+.mic.on{background:var(--red);animation:pl 1s infinite}
+@keyframes pl{50%{box-shadow:0 0 0 7px rgba(192,57,43,.25)}}
 </style>
 </head>
 <body>
@@ -73,7 +77,7 @@ nav button{font-size:10px}
     <div id="pList" style="margin-top:10px"></div>
     <p class="mut" style="margin-top:6px">La lista se guarda en este teléfono y aparece al elegir el proyecto.</p>
   </div>
-  <div class="card"><h2>Observaciones generales</h2><textarea data-k="obs" placeholder="Resumen de la visita, condiciones del sitio, coordinaciones…"></textarea></div>
+  <div class="card"><h2>Observaciones generales</h2><div class="mw"><textarea data-k="obs" placeholder="Resumen de la visita, condiciones del sitio, coordinaciones…"></textarea><button type="button" class="mic" aria-label="Dictar por voz">🎤</button></div></div>
   <button class="btn s" id="reset">📁 Historial y nuevo informe</button>
 </section>
 
@@ -126,6 +130,7 @@ nav button{font-size:10px}
 
 <script>
 const KEY='roble_sup_v1';
+const MIC='<button type="button" class="mic" aria-label="Dictar por voz">🎤</button>';
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const blank=()=>({id:uid(),empresa:'Grupo Roble',telefono:'',correo:'',proyecto:'',fecha:new Date().toISOString().slice(0,10),visita:'',supervisor:'',contratista:'',clima:'Soleado',personal:'',obs:'',act:[],fot:[],hal:[],pen:[]});
 let S=blank();
@@ -162,7 +167,7 @@ rP();
 
 // tabs
 $('#nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;go(+b.dataset.t)};
-function go(i){$$('section').forEach((s,j)=>s.classList.toggle('on',i===j));$$('#nav button').forEach((b,j)=>b.classList.toggle('on',i===j));if(i===3)rCarry();if(i===4)summary();if(i===5){persist().then(rHist)}scrollTo(0,0)}
+function go(i){stopRec();$$('section').forEach((s,j)=>s.classList.toggle('on',i===j));$$('#nav button').forEach((b,j)=>b.classList.toggle('on',i===j));if(i===3)rCarry();if(i===4)summary();if(i===5){persist().then(rHist)}scrollTo(0,0)}
 
 // simple fields
 $$('[data-k]').forEach(el=>{el.value=S[el.dataset.k]??'';el.oninput=()=>{S[el.dataset.k]=el.value;head();save()}});
@@ -201,22 +206,44 @@ $('#hList').onclick=async e=>{const b=e.target.closest('[data-h]');if(!b)return;
   else if(k==='del'){if(!confirm('¿Eliminar este informe? No se puede deshacer.'))return;await DB.del(id);HIST=HIST.filter(x=>x.id!==id);
     if(id===S.id){S=blank();localStorage.removeItem(KEY);save();refreshUI()}rHist();toast('Informe eliminado')}};
 
+// dictado por voz
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let REC=null;
+function stopRec(){const r=REC;REC=null;if(!r)return;r.want=false;r.btn.classList.remove('on');try{r.r.stop()}catch(e){}}
+function startRec(btn){
+  const el=btn.previousElementSibling;let base=el.value,quiet=0;
+  const sp=t=>(base&&!/\s$/.test(base)?' ':'')+t;
+  const st={btn,want:true,r:null};REC=st;btn.classList.add('on');
+  const go=()=>{const r=new SR();st.r=r;r.lang='es-CR';r.interimResults=true;r.continuous=false;
+    r.onresult=ev=>{quiet=0;let fin='',itm='';for(let i=ev.resultIndex;i<ev.results.length;i++){const t=ev.results[i][0].transcript;if(ev.results[i].isFinal)fin+=t;else itm+=t}
+      if(fin)base+=sp(fin.trim());el.value=base+(itm?sp(itm.trim()):'');el.dispatchEvent(new Event('input',{bubbles:true}))};
+    r.onerror=ev=>{if(ev.error==='no-speech'){if(++quiet>=2)stopRec();return}if(ev.error==='aborted')return;
+      stopRec();toast(ev.error==='not-allowed'||ev.error==='service-not-allowed'?'Permite el micrófono para dictar':ev.error==='network'?'El dictado necesita internet':'No se pudo dictar; usa el micrófono del teclado')};
+    r.onend=()=>{if(st.want&&REC===st){try{go()}catch(e){stopRec()}}else{btn.classList.remove('on')}};
+    r.start()};
+  try{go()}catch(e){stopRec();toast('No se pudo iniciar el dictado')}
+}
+document.addEventListener('click',e=>{const b=e.target.closest('.mic');if(!b)return;
+  if(!SR){toast('Este navegador no tiene dictado; usa el micrófono del teclado');return}
+  if(REC&&REC.btn===b){stopRec();return}stopRec();startRec(b)});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopRec()});
+
 // lists
 const T={
  act:(x,i)=>`<div class="card g"><button class="x" data-del="act" data-i="${i}">Quitar</button><label>Actividad / frente</label><input data-l="act" data-i="${i}" data-f="n" value="${esc(x.n)}" placeholder="Ej. Losa de entrepiso">
   <label>Programado a la fecha</label><div class="range"><input type="range" min="0" max="100" step="5" data-l="act" data-i="${i}" data-f="prog" value="${x.prog||0}"><b>${x.prog||0}%</b></div>
   <label>Avance real</label><div class="range"><input type="range" min="0" max="100" step="5" data-l="act" data-i="${i}" data-f="real" value="${x.real||0}"><b>${x.real||0}%</b></div>
-  <label>Nota</label><input data-l="act" data-i="${i}" data-f="nota" value="${esc(x.nota)}" placeholder="Opcional"></div>`,
+  <label>Nota</label><div class="mw"><input data-l="act" data-i="${i}" data-f="nota" value="${esc(x.nota)}" placeholder="Opcional">${MIC}</div></div>`,
  hal:(x,i)=>`<div class="card r"><button class="x" data-del="hal" data-i="${i}">Quitar</button>${x.prev?`<span class="pill" style="background:var(--amber)">Seguimiento · visita ${fmtF(x.prev)}</span>`:''}
   <div class="row"><div><label>Tipo</label><select data-l="hal" data-i="${i}" data-f="tipo">${['Calidad','Seguridad','Seguimiento','Ambiental','Otro'].map(o=>`<option ${x.tipo===o?'selected':''}>${o}</option>`).join('')}</select></div>
   <div><label>Severidad</label><select data-l="hal" data-i="${i}" data-f="sev">${['Baja','Media','Alta'].map(o=>`<option ${x.sev===o?'selected':''}>${o}</option>`).join('')}</select></div></div>
-  <label>Descripción</label><textarea data-l="hal" data-i="${i}" data-f="desc" placeholder="Qué se observó y dónde">${esc(x.desc)}</textarea>
-  <label>Acción correctiva</label><textarea data-l="hal" data-i="${i}" data-f="acc">${esc(x.acc)}</textarea>
+  <label>Descripción</label><div class="mw"><textarea data-l="hal" data-i="${i}" data-f="desc" placeholder="Qué se observó y dónde">${esc(x.desc)}</textarea>${MIC}</div>
+  <label>Acción correctiva</label><div class="mw"><textarea data-l="hal" data-i="${i}" data-f="acc">${esc(x.acc)}</textarea>${MIC}</div>
   <div class="row"><div><label>Responsable</label><input data-l="hal" data-i="${i}" data-f="resp" value="${esc(x.resp)}"></div><div><label>Fecha límite</label><input type="date" data-l="hal" data-i="${i}" data-f="lim" value="${esc(x.lim)}"></div></div>
   <label>Estado</label><select data-l="hal" data-i="${i}" data-f="est">${['Abierto','En proceso','Cerrado'].map(o=>`<option ${x.est===o?'selected':''}>${o}</option>`).join('')}</select></div>`,
- pen:(x,i)=>`<div class="card"><button class="x" data-del="pen" data-i="${i}">Quitar</button><label>Pendiente</label><input data-l="pen" data-i="${i}" data-f="t" value="${esc(x.t)}">
+ pen:(x,i)=>`<div class="card"><button class="x" data-del="pen" data-i="${i}">Quitar</button><label>Pendiente</label><div class="mw"><input data-l="pen" data-i="${i}" data-f="t" value="${esc(x.t)}">${MIC}</div>
   <div class="row"><div><label>Responsable</label><input data-l="pen" data-i="${i}" data-f="resp" value="${esc(x.resp)}"></div><div><label>Fecha</label><input type="date" data-l="pen" data-i="${i}" data-f="f" value="${esc(x.f)}"></div></div></div>`,
- fot:(x,i)=>`<div class="card"><button class="x" data-del="fot" data-i="${i}">Quitar</button><img class="ph" src="${x.d}"><label>Comentario</label><input data-l="fot" data-i="${i}" data-f="c" value="${esc(x.c)}" placeholder="Ubicación / qué muestra"></div>`
+ fot:(x,i)=>`<div class="card"><button class="x" data-del="fot" data-i="${i}">Quitar</button><img class="ph" src="${x.d}"><label>Comentario</label><div class="mw"><input data-l="fot" data-i="${i}" data-f="c" value="${esc(x.c)}" placeholder="Ubicación / qué muestra">${MIC}</div></div>`
 };
 const LID={act:'#actL',hal:'#halL',pen:'#penL',fot:'#fotL'};
 function render(k){$(LID[k]).innerHTML=S[k].map(T[k]).join('')}
